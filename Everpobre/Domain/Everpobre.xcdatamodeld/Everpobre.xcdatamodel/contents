@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="14133" systemVersion="17E199" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="Note" representedClassName="Note" syncable="YES">
+        <attribute name="createDate" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="expirationDate" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="text" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="title" attributeType="String" syncable="YES"/>
+        <relationship name="notebook" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Notebook" inverseName="notes" inverseEntity="Notebook" syncable="YES"/>
+        <relationship name="photo" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="PhotoContainer" inverseName="note" inverseEntity="PhotoContainer" syncable="YES"/>
+        <fetchIndex name="byDate">
+            <fetchIndexElement property="createDate" type="Binary" order="ascending"/>
+        </fetchIndex>
+        <fetchIndex name="byText">
+            <fetchIndexElement property="text" type="Binary" order="ascending"/>
+        </fetchIndex>
+    </entity>
+    <entity name="Notebook" representedClassName="Notebook" syncable="YES">
+        <attribute name="createDate" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="isDefault" attributeType="String" syncable="YES"/>
+        <attribute name="name" attributeType="String" syncable="YES"/>
+        <relationship name="notes" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Note" inverseName="notebook" inverseEntity="Note" syncable="YES"/>
+        <fetchIndex name="byName">
+            <fetchIndexElement property="name" type="Binary" order="ascending"/>
+            <fetchIndexElement property="createDate" type="Binary" order="descending"/>
+        </fetchIndex>
+    </entity>
+    <entity name="PhotoContainer" representedClassName="PhotoContainer" syncable="YES">
+        <attribute name="imageData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES" syncable="YES"/>
+        <relationship name="note" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Note" inverseName="photo" inverseEntity="Note" syncable="YES"/>
+    </entity>
+    <elements>
+        <element name="Note" positionX="-225" positionY="-171" width="128" height="135"/>
+        <element name="Notebook" positionX="-459" positionY="-162" width="128" height="105"/>
+        <element name="PhotoContainer" positionX="-396" positionY="36" width="128" height="75"/>
+    </elements>
+</model>
