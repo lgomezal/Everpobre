@@ -7,114 +7,125 @@
 //
 
 import UIKit
+import CoreData
+import CoreLocation
 
-class NoteViewController: UIViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate, UITextFieldDelegate, UITextViewDelegate {
+class NoteViewController: UIViewController, UITextFieldDelegate,UIImagePickerControllerDelegate, UINavigationControllerDelegate, UITextViewDelegate, SelectInMapDelegate {
     
-    var imagesArray: [PhotoContainer] = []
+    var placemark: CLPlacemark?
+    var userAddress: String?
     
     let dateLabel = UILabel()
-    let dateText = UILabel()
-    let expirationDate = UILabel()
-    let expirationText = UILabel()
+    let expirationDate = UITextField()
     let titleTextField = UITextField()
+    let topLine = UIView()
     let noteTextView = UITextView()
     
-    let imageView = UIImageView()
+    let locationLabel = UILabel()
+    var bottomConstraint:NSLayoutConstraint!
     
-    var topImgConstraint: NSLayoutConstraint!
-    var bottomImgConstraint: NSLayoutConstraint!
-    var leftImgConstraint: NSLayoutConstraint!
-    var rightImgConstraint: NSLayoutConstraint!
+    var note: Note!
+    var pictures: [PhotoContainer] = []
+    var imageViews: [UIImageView] = []
     
-    var relativePoint: CGPoint!
     
-    var note: Note?
+    let dateFormatter = { () -> DateFormatter in
+        let dateF = DateFormatter()
+        dateF.dateStyle = .short  // Usar este tipo nos garantiza la localización.
+        dateF.timeStyle = .none
+        return dateF
+    }()
+    
+    var relativePoint = CGPoint.zero
     
     override func loadView() {
         
         let backView = UIView()
         backView.backgroundColor = .white
         
-        // Configure label
-        dateLabel.text = ""
         backView.addSubview(dateLabel)
-        dateText.text = "Start:"
-        backView.addSubview(dateText)
-        
-        // Configure Expiration label
-        expirationDate.text = ""
         backView.addSubview(expirationDate)
-        expirationText.text = "End:"
-        backView.addSubview(expirationText)
+        expirationDate.textAlignment = .center
         
-        
-        // Configure textField
-        titleTextField.placeholder = "Title note"
         backView.addSubview(titleTextField)
+        titleTextField.delegate = self
         
-        // Configure noteTextView
-        noteTextView.text = ""
+        backView.addSubview(locationLabel)
         
         backView.addSubview(noteTextView)
+        noteTextView.delegate = self
         
-        // Configure imageView
-        backView.addSubview(imageView)
+        // titles labels:
+        let titleLabel = UILabel()
+        titleLabel.text = NSLocalizedString("Title", comment: "title note label")
+        titleLabel.font = UIFont.systemFont(ofSize: UIFont.smallSystemFontSize)
+        backView.addSubview(titleLabel)
+        
+        let expirationTitleLabel = UILabel()
+        expirationTitleLabel.text = NSLocalizedString("Expiration", comment: "Expiration note label")
+        expirationTitleLabel.font = UIFont.systemFont(ofSize: UIFont.smallSystemFontSize)
+        
+        backView.addSubview(expirationTitleLabel)
+        
+        let createTitleLabel = UILabel()
+        createTitleLabel.text = NSLocalizedString("Created", comment: "Created note label")
+        createTitleLabel.font = UIFont.systemFont(ofSize: UIFont.smallSystemFontSize)
+        backView.addSubview(createTitleLabel)
+        
+        
         
         
         // MARK: Autolayout.
         
         dateLabel.translatesAutoresizingMaskIntoConstraints = false
-        dateText.translatesAutoresizingMaskIntoConstraints = false
         noteTextView.translatesAutoresizingMaskIntoConstraints = false
         titleTextField.translatesAutoresizingMaskIntoConstraints = false
         expirationDate.translatesAutoresizingMaskIntoConstraints = false
-        expirationText.translatesAutoresizingMaskIntoConstraints = false
+        locationLabel.translatesAutoresizingMaskIntoConstraints = false
         
-        imageView.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        expirationTitleLabel.translatesAutoresizingMaskIntoConstraints = false
+        createTitleLabel.translatesAutoresizingMaskIntoConstraints = false
         
-        let viewDict = ["dateText":dateText,"dateLabel":dateLabel,"noteTextView":noteTextView,"titleTextField":titleTextField,"expirationDate":expirationDate,"expirationText":expirationText]
+        
+        let viewDict = ["dateLabel":dateLabel,"noteTextView":noteTextView,"titleTextField":titleTextField,"expirationDate":expirationDate,"locationLabel":locationLabel,"titleLabel":titleLabel,"expirationTitleLabel":expirationTitleLabel,"createTitleLabel":createTitleLabel]
         
         // Horizontals
-        var constraints = NSLayoutConstraint.constraints(withVisualFormat: "|-10-[dateText]-10-[dateLabel]-10-[expirationText]-10-[expirationDate]-10-|", options: [], metrics: nil, views: viewDict)
-        constraints.append(contentsOf: NSLayoutConstraint.constraints(withVisualFormat: "|-10-[titleTextField]-10-|", options: [], metrics: nil, views: viewDict))
+        var constraints = NSLayoutConstraint.constraints(withVisualFormat: "|-10-[titleTextField]-10-[expirationDate]-10-[dateLabel]-10-|", options: [], metrics: nil, views: viewDict)
         constraints.append(contentsOf: NSLayoutConstraint.constraints(withVisualFormat: "|-10-[noteTextView]-10-|", options: [], metrics: nil, views: viewDict))
+        constraints.append(contentsOf: NSLayoutConstraint.constraints(withVisualFormat: "|-10-[locationLabel]-10-|", options: [], metrics: nil, views: viewDict))
+        
+        constraints.append(NSLayoutConstraint(item: titleLabel, attribute: .left, relatedBy: .equal, toItem: titleTextField, attribute: .left, multiplier: 1, constant: 0))
+        constraints.append(NSLayoutConstraint(item: expirationTitleLabel, attribute: .centerX, relatedBy: .equal, toItem: expirationDate, attribute: .centerX, multiplier: 1, constant: 0))
+        constraints.append(NSLayoutConstraint(item: createTitleLabel, attribute: .right, relatedBy: .equal, toItem: dateLabel, attribute: .right, multiplier: 1, constant: 0))
+        
         
         // Verticals
         
-        constraints.append(contentsOf: NSLayoutConstraint.constraints(withVisualFormat: "V:[dateText]-10-[titleTextField]-10-[noteTextView]-10-|", options: [], metrics: nil, views: viewDict))
+        constraints.append(contentsOf: NSLayoutConstraint.constraints(withVisualFormat: "V:[dateLabel]-4-[createTitleLabel]-[locationLabel]-[noteTextView]", options: [], metrics: nil, views: viewDict))
         
-        constraints.append(NSLayoutConstraint(item: dateText, attribute: .top, relatedBy: .equal, toItem: backView.safeAreaLayoutGuide, attribute: .top, multiplier: 1, constant: 10))
+        constraints.append(NSLayoutConstraint(item: dateLabel, attribute: .top, relatedBy: .equal, toItem: backView.safeAreaLayoutGuide, attribute: .top, multiplier: 1, constant: 10))
+        bottomConstraint = NSLayoutConstraint(item: noteTextView, attribute: .bottom, relatedBy: .equal, toItem: backView.safeAreaLayoutGuide, attribute: .bottom, multiplier: 1, constant: -10)
+        constraints.append(bottomConstraint)
         
-        constraints.append(NSLayoutConstraint(item: titleTextField, attribute: .lastBaseline, relatedBy: .equal, toItem: dateText, attribute: .lastBaseline, multiplier: 1, constant: 0))
         
-        constraints.append(NSLayoutConstraint(item: dateLabel, attribute: .lastBaseline, relatedBy: .equal, toItem: dateText, attribute: .lastBaseline, multiplier: 1, constant: 0))
         
-        constraints.append(NSLayoutConstraint(item: expirationText, attribute: .lastBaseline, relatedBy: .equal, toItem: dateLabel, attribute: .lastBaseline, multiplier: 1, constant: 0))
+        constraints.append(NSLayoutConstraint(item: titleTextField, attribute: .lastBaseline, relatedBy: .equal, toItem: dateLabel, attribute: .lastBaseline, multiplier: 1, constant: 0))
         
-        constraints.append(NSLayoutConstraint(item: expirationDate, attribute: .lastBaseline, relatedBy: .equal, toItem: expirationText, attribute: .lastBaseline, multiplier: 1, constant: 0))
-        
-        // Img View Constraint.
-        
-        topImgConstraint = NSLayoutConstraint(item: imageView, attribute: .top, relatedBy: .equal, toItem: noteTextView, attribute: .top, multiplier: 1, constant: 75)
-        
-        bottomImgConstraint = NSLayoutConstraint(item: imageView, attribute: .bottom, relatedBy: .equal, toItem: noteTextView, attribute: .bottom, multiplier: 1, constant: -20)
-        
-        leftImgConstraint = NSLayoutConstraint(item: imageView, attribute: .left, relatedBy: .equal, toItem: noteTextView, attribute: .left, multiplier: 1, constant: 20)
-        
-        rightImgConstraint = NSLayoutConstraint(item: imageView, attribute: .right, relatedBy: .equal, toItem: noteTextView, attribute: .right, multiplier: 1, constant: -20)
-        
-        var imgConstraints = [NSLayoutConstraint(item: imageView, attribute: .width, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 0, constant: 75)]
-        
-        imgConstraints.append(NSLayoutConstraint(item: imageView, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 0, constant: 100))
-        
-        imgConstraints.append(contentsOf: [topImgConstraint,bottomImgConstraint,leftImgConstraint,rightImgConstraint])
-        
+        constraints.append(NSLayoutConstraint(item: expirationDate, attribute: .lastBaseline, relatedBy: .equal, toItem: dateLabel, attribute: .lastBaseline, multiplier: 1, constant: 0))
+        constraints.append(NSLayoutConstraint(item: titleLabel, attribute: .lastBaseline, relatedBy: .equal, toItem: createTitleLabel, attribute: .lastBaseline, multiplier: 1, constant: 0))
+        constraints.append(NSLayoutConstraint(item: expirationTitleLabel, attribute: .lastBaseline, relatedBy: .equal, toItem: createTitleLabel, attribute: .lastBaseline, multiplier: 1, constant: 0))
         
         backView.addConstraints(constraints)
-        backView.addConstraints(imgConstraints)
         
-        NSLayoutConstraint.deactivate([bottomImgConstraint,rightImgConstraint])
+        // MARK. Top line
+        noteTextView.addSubview(topLine)
         
+        topLine.translatesAutoresizingMaskIntoConstraints = false
+        var lineContraints = NSLayoutConstraint.constraints(withVisualFormat: "|-0-[line]-0-|", options: [], metrics: nil, views: ["line":topLine])
+        lineContraints.append(contentsOf: NSLayoutConstraint.constraints(withVisualFormat: "V:|-0-[line(1)]", options: [], metrics: nil, views: ["line":topLine]))
+        
+        noteTextView.addConstraints(lineContraints)
         
         
         self.view = backView
@@ -123,17 +134,35 @@ class NoteViewController: UIViewController, UIImagePickerControllerDelegate, UIN
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        titleTextField.delegate = self
-        noteTextView.delegate = self
+        titleTextField.text = note.title
+        noteTextView.text = note.text
+        dateLabel.text = dateFormatter.string(from: note.createDate)
+        expirationDate.text = dateFormatter.string(from: note.expirationDate)
         
-        // MARK: Navigation Controller
+        locationLabel.text = note.address
+        
+        pictures = note.photo.sortedArray(using: [NSSortDescriptor(key: "tag", ascending: true)]) as! [PhotoContainer]
+        
+        for picture  in pictures {
+            pictures.append(picture)
+            addNewImage(UIImage(data: picture.imageData! as Data)!, tag: Int(picture.tag), relativeX: picture.x , relativeY: picture.y)
+        }
+        
+        // MARK: Views
+        let datePicker = UIDatePicker()
+        datePicker.datePickerMode = .date
+        datePicker.addTarget(self, action: #selector(dateChanged(_:)), for: .valueChanged)
+        expirationDate.inputView = datePicker
+        
+        // MARK: Toolbar
+        
         navigationController?.isToolbarHidden = false
         
-        let photoBarButton = UIBarButtonItem(barButtonSystemItem: .camera, target: self, action: #selector(catchPhoto))
+        let photoBarButton = UIBarButtonItem(title: NSLocalizedString("Add image", comment: "ToolbarButton"), style: .plain, target: self, action: #selector(catchPhoto))
         
         let flexible = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
         
-        let mapBarButton = UIBarButtonItem(title: "Map", style: .done, target: self, action: #selector(addLocation))
+        let mapBarButton = UIBarButtonItem(title: NSLocalizedString("Add Location", comment: "ToolbarButton"), style: .plain, target: self, action: #selector(addLocation))
         
         self.setToolbarItems([photoBarButton,flexible,mapBarButton], animated: false)
         
@@ -144,83 +173,7 @@ class NoteViewController: UIViewController, UIImagePickerControllerDelegate, UIN
         
         view.addGestureRecognizer(swipeGesture)
         
-        imageView.isUserInteractionEnabled = true
-        
-        let moveViewGesture = UILongPressGestureRecognizer(target: self, action: #selector(userMoveImage))
-        
-        imageView.addGestureRecognizer(moveViewGesture)
-        
-        // MARK: About Note
-        
-        if self.note != nil {
-            
-            syncModelView()
-        }
-        
-    }
-    
-    @objc func userMoveImage(longPressGesture:UILongPressGestureRecognizer)
-    {
-        switch longPressGesture.state {
-        case .began:
-            closeKeyboard()
-            relativePoint = longPressGesture.location(in: longPressGesture.view)
-            UIView.animate(withDuration: 0.1, animations: {
-                self.imageView.transform = CGAffineTransform.init(scaleX: 1.2, y: 1.2)
-            })
-            
-        case .changed:
-            let location = longPressGesture.location(in: noteTextView)
-            
-            leftImgConstraint.constant = location.x - relativePoint.x
-            topImgConstraint.constant = location.y - relativePoint.y
-            
-        case .ended, .cancelled:
-            
-            UIView.animate(withDuration: 0.1, animations: {
-                self.imageView.transform = CGAffineTransform.init(scaleX: 1, y: 1)
-            })
-            
-        default:
-            break
-        }
-        
-    }
-    
-    
-    @objc func moveImage(tapGesture:UITapGestureRecognizer)
-    {
-        
-        if topImgConstraint.isActive
-        {
-            if leftImgConstraint.isActive
-            {
-                leftImgConstraint.isActive = false
-                rightImgConstraint.isActive = true
-            }
-            else
-            {
-                topImgConstraint.isActive = false
-                bottomImgConstraint.isActive = true
-            }
-        }
-        else
-        {
-            if leftImgConstraint.isActive
-            {
-                bottomImgConstraint.isActive = false
-                topImgConstraint.isActive = true
-            }
-            else
-            {
-                rightImgConstraint.isActive = false
-                leftImgConstraint.isActive = true
-            }
-        }
-        
-        UIView.animate(withDuration: 0.4) {
-            self.view.layoutIfNeeded()
-        }
+        setupViewsWithKeyboards()
     }
     
     @objc func closeKeyboard()
@@ -234,70 +187,92 @@ class NoteViewController: UIViewController, UIImagePickerControllerDelegate, UIN
         {
             titleTextField.resignFirstResponder()
         }
-    }
-    
-    
-    override func viewDidLayoutSubviews()
-    {
-        var rect = view.convert(imageView.frame, to: noteTextView)
-        rect = rect.insetBy(dx: -15, dy: -15)
-        
-        let paths = UIBezierPath(rect: rect)
-        noteTextView.textContainer.exclusionPaths = [paths]
-    }
-    
-    func syncModelView() {
-        titleTextField.text = note?.title
-        noteTextView.text = note?.text
-        let formatter = DateFormatter()
-        formatter.dateFormat = "dd-MM-yyyy"
-        let creationDate = note?.createDate
-        let expiratDate = note?.expirationDate
-        expirationDate.text = formatter.string(from: (expiratDate)!)
-        dateLabel.text = formatter.string(from: (creationDate)!)
-        imagesArray = note?.photo.allObjects as! [PhotoContainer]
-        for photo in imagesArray {
-            let nsdata = photo.imageData
-            let image = UIImage(data: nsdata! as Data)
-            imageView.image = image
+        else if expirationDate.isFirstResponder
+        {
+            expirationDate.resignFirstResponder()
         }
     }
     
+    // MARK: TextField Delegate
+    func textFieldDidEndEditing(_ textField: UITextField)
+    {
+        let newText = textField.text ?? ""
+        if newText.count > 0
+        {
+            let privateMOC = DataManager.sharedManager.persistentContainer.newBackgroundContext()
+            privateMOC.perform {
+                let privateNote = privateMOC.object(with: self.note.objectID) as! Note
+                privateNote.title = newText
+                try! privateMOC.save()
+            }
+        }
+    }
+    
+    // MARK: Date Picker
+    @objc func dateChanged(_ datePicker:UIDatePicker)
+    {
+        expirationDate.text = dateFormatter.string(from: datePicker.date)
+        let privateMOC = DataManager.sharedManager.persistentContainer.newBackgroundContext()
+        privateMOC.perform {
+            let privateNote = privateMOC.object(with: self.note.objectID) as! Note
+            privateNote.expirationDate = datePicker.date.addingTimeInterval(NSTimeIntervalSince1970)
+            try! privateMOC.save()
+        }
+    }
+    
+    // MARK: TextView Delegate
+    func textViewDidEndEditing(_ textView: UITextView)
+    {
+        let newText = textView.text ?? ""
+        let privateMOC = DataManager.sharedManager.persistentContainer.newBackgroundContext()
+        privateMOC.perform {
+            let privateNote = privateMOC.object(with: self.note.objectID) as! Note
+            privateNote.text = newText
+            try! privateMOC.save()
+        }
+        
+    }
     
     // MARK: Toolbar Buttons actions
     
-    @objc func catchPhoto()
+    @objc func catchPhoto(_ barButton:UIBarButtonItem)
     {
-        let actionSheetAlert = UIAlertController(title: NSLocalizedString("Add photo", comment: "Add photo"), message: nil, preferredStyle: .actionSheet)
+        let actionSheetAlert = UIAlertController(title: NSLocalizedString("Add image", comment: "Action Sheet title"), message: nil, preferredStyle: .actionSheet)
         
         let imagePicker = UIImagePickerController()
         imagePicker.delegate = self
         
-        let useCamera = UIAlertAction(title: "Camera", style: .default) { (alertAction) in
+        let useCamera = UIAlertAction(title: NSLocalizedString("Camera", comment: "Action Sheet Value"), style: .default) { (alertAction) in
             imagePicker.sourceType = .camera
             self.present(imagePicker, animated: true, completion: nil)
         }
         
-        let usePhotoLibrary = UIAlertAction(title: "Photo Library", style: .default) { (alertAction) in
+        let usePhotoLibrary = UIAlertAction(title: NSLocalizedString("Photo Library", comment: "Action Sheet Value"), style: .default) { (alertAction) in
             imagePicker.sourceType = .photoLibrary
             self.present(imagePicker, animated: true, completion: nil)
         }
-        let cancel = UIAlertAction(title: NSLocalizedString("Cancel", comment: "Cancel"), style: .destructive, handler: nil)
+        let cancel = UIAlertAction(title: NSLocalizedString("Cancel", comment: ""), style: .destructive, handler: nil)
         
         actionSheetAlert.addAction(useCamera)
         actionSheetAlert.addAction(usePhotoLibrary)
         actionSheetAlert.addAction(cancel)
         
-        
+        let popOverCont = actionSheetAlert.popoverPresentationController
+        popOverCont?.barButtonItem = barButton
         
         present(actionSheetAlert, animated: true, completion: nil)
     }
     
-    @objc func addLocation()
+    @objc func addLocation(_ barButton:UIBarButtonItem)
     {
-        let mapViewController = MapViewController()
+        let selectAddress = SelectInMapViewController()
+        selectAddress.delegate = self
+        let navController = UINavigationController(rootViewController: selectAddress)
+        navController.modalPresentationStyle = UIModalPresentationStyle.popover
+        let popOverCont = navController.popoverPresentationController
+        popOverCont?.barButtonItem = barButton
         
-        navigationController?.pushViewController(mapViewController, animated: true)
+        present(navController, animated: true, completion: nil)
         
     }
     
@@ -306,39 +281,84 @@ class NoteViewController: UIViewController, UIImagePickerControllerDelegate, UIN
         
         let image = info[UIImagePickerControllerOriginalImage] as! UIImage
         
-        imageView.image = image
+        let currentImages = note.photo.count
+        let tag = currentImages + 1
         
-        picker.dismiss(animated: true, completion: nil)
+        let xRelative = Double(tag*10) / Double(UIScreen.main.bounds.width)
+        let yRelative = Double(tag*10) / Double(UIScreen.main.bounds.height)
         
-        let context = Container.mainContainer.viewContext
+        let backMOC = DataManager.sharedManager.persistentContainer.newBackgroundContext()
         
-        _ = PhotoContainer(image: image, note: note!, inContext: context)
+        backMOC.perform {
+            
+            let picture = NSEntityDescription.insertNewObject(forEntityName: "PhotoContainer", into: backMOC) as! PhotoContainer
+            
+            picture.x = xRelative
+            picture.y = yRelative
+            picture.rotation = 0
+            picture.scale = 1
+            picture.tag = Int64(tag)
+            picture.imageData = UIImagePNGRepresentation(image)! as NSData
+            
+            picture.note = (backMOC.object(with: self.note.objectID) as! Note)
+            
+            try! backMOC.save()
+            
+            DispatchQueue.main.async {
+                self.pictures.append(DataManager.sharedManager.persistentContainer.viewContext.object(with: picture.objectID) as! PhotoContainer)
+                self.addNewImage(image, tag: tag, relativeX: xRelative, relativeY: yRelative)
+                picker.dismiss(animated: true, completion: nil)
+            }
+        }
         
-        try! note?.managedObjectContext?.save()
         
     }
     
-    // MARK: - TextField Delegate
-    func textFieldDidEndEditing(_ textField: UITextField)
-    {
-        note?.title = textField.text!
+    // MARK: Select In Map Delegate
+    func address(_ address: String, lat: Double, lon: Double) {
+        locationLabel.text = address
+        let backMOC = DataManager.sharedManager.persistentContainer.newBackgroundContext()
         
-        try! note?.managedObjectContext?.save()
+        backMOC.perform {
+            
+            let backNote = (backMOC.object(with: self.note.objectID) as! Note)
+            
+            backNote.address = address
+            backNote.lat = lat
+            backNote.lon = lon
+            
+            try! backMOC.save()
+        }
+        
     }
     
-    // MARK: - TextView Delegate
-    func textViewDidEndEditing(_ textView: UITextView)
-    {
-        note?.text = textView.text
-        
-        try! note?.managedObjectContext?.save()
+    // MARK: Manage Keyboard
+    func setupViewsWithKeyboards()  {
+        NotificationCenter.default.addObserver(self,
+                                               selector: #selector(keyboardWillShow),
+                                               name: Notification.Name.UIKeyboardWillShow,
+                                               object: nil)
+        NotificationCenter.default.addObserver(self,
+                                               selector: #selector(keyboardWillHide),
+                                               name: Notification.Name.UIKeyboardWillHide,
+                                               object: nil)
     }
-}
-
-extension NoteViewController: NotesTableViewControllerDelegate {
-    func notesTableViewController(_ vc: NotesTableViewController, didSelectNote note: Note) {
-        self.note = note
-        syncModelView()
+    
+    @objc func keyboardWillShow(notification:Notification)
+    {
+        let info = notification.userInfo
+        let kbSize = (info![UIKeyboardFrameEndUserInfoKey] as! NSValue).cgRectValue.size
+        UIView.animate(withDuration: 0.1) {
+            self.bottomConstraint.constant = -(kbSize.height)
+        }
+        
+    }
+    
+    @objc func keyboardWillHide(notification:Notification)
+    {
+        UIView.animate(withDuration: 0.1) {
+            self.bottomConstraint.constant = -10
+        }
     }
     
 }

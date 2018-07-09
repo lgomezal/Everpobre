@@ -14,15 +14,15 @@
 		BA022ABE2073EBE6008C61D6 /* _Notebook.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA022ABC2073EBE6008C61D6 /* _Notebook.swift */; };
 		BA022AC02073F227008C61D6 /* placeholder.png in Resources */ = {isa = PBXBuildFile; fileRef = BA022ABF2073F227008C61D6 /* placeholder.png */; };
 		BA022AC22073F478008C61D6 /* Screen.png in Resources */ = {isa = PBXBuildFile; fileRef = BA022AC12073F478008C61D6 /* Screen.png */; };
+		BA24464220C7F0320048A6A3 /* NoteViewController+Images.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA24464120C7F0320048A6A3 /* NoteViewController+Images.swift */; };
+		BA24464420C7F1AD0048A6A3 /* SelectInMapViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA24464320C7F1AD0048A6A3 /* SelectInMapViewController.swift */; };
 		BA61FB5C2072AC7600EE6A25 /* Notebook.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA61FB562072AC7500EE6A25 /* Notebook.swift */; };
 		BA61FB5E2072AC7600EE6A25 /* Note.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA61FB582072AC7500EE6A25 /* Note.swift */; };
 		BA61FB602072AC7600EE6A25 /* _PhotoContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA61FB5A2072AC7500EE6A25 /* _PhotoContainer.swift */; };
 		BA61FB612072AC7600EE6A25 /* PhotoContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA61FB5B2072AC7500EE6A25 /* PhotoContainer.swift */; };
 		BA7A681E2078A817009822E3 /* NoteViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA7A681D2078A817009822E3 /* NoteViewController.swift */; };
 		BA7A68202078D281009822E3 /* UIViewController+Additions.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA7A681F2078D281009822E3 /* UIViewController+Additions.swift */; };
-		BA8053DF208D21BB0061C678 /* MapViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA8053DE208D21BB0061C678 /* MapViewController.swift */; };
 		BA9A9D7D208B0EB800F6717F /* Enums.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA9A9D7C208B0EB800F6717F /* Enums.swift */; };
-		BABC8B2E207AB15A00DA5DAF /* AddNotebookViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BABC8B2D207AB15A00DA5DAF /* AddNotebookViewController.swift */; };
 		BAD560892089FEE70008B1C0 /* NotebooksTableViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAD560872089FEE70008B1C0 /* NotebooksTableViewController.swift */; };
 		BAD5608A2089FEE70008B1C0 /* NotebooksTableViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = BAD560882089FEE70008B1C0 /* NotebooksTableViewController.xib */; };
 		BAF6C092206CEB50008CB519 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAF6C091206CEB50008CB519 /* AppDelegate.swift */; };
@@ -51,15 +51,15 @@
 		BA022ABC2073EBE6008C61D6 /* _Notebook.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = _Notebook.swift; sourceTree = "<group>"; };
 		BA022ABF2073F227008C61D6 /* placeholder.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = placeholder.png; sourceTree = "<group>"; };
 		BA022AC12073F478008C61D6 /* Screen.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Screen.png; sourceTree = "<group>"; };
+		BA24464120C7F0320048A6A3 /* NoteViewController+Images.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NoteViewController+Images.swift"; sourceTree = "<group>"; };
+		BA24464320C7F1AD0048A6A3 /* SelectInMapViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectInMapViewController.swift; sourceTree = "<group>"; };
 		BA61FB562072AC7500EE6A25 /* Notebook.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Notebook.swift; sourceTree = "<group>"; };
 		BA61FB582072AC7500EE6A25 /* Note.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Note.swift; sourceTree = "<group>"; };
 		BA61FB5A2072AC7500EE6A25 /* _PhotoContainer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = _PhotoContainer.swift; sourceTree = "<group>"; };
 		BA61FB5B2072AC7500EE6A25 /* PhotoContainer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PhotoContainer.swift; sourceTree = "<group>"; };
 		BA7A681D2078A817009822E3 /* NoteViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteViewController.swift; sourceTree = "<group>"; };
 		BA7A681F2078D281009822E3 /* UIViewController+Additions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIViewController+Additions.swift"; sourceTree = "<group>"; };
-		BA8053DE208D21BB0061C678 /* MapViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapViewController.swift; sourceTree = "<group>"; };
 		BA9A9D7C208B0EB800F6717F /* Enums.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Enums.swift; sourceTree = "<group>"; };
-		BABC8B2D207AB15A00DA5DAF /* AddNotebookViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddNotebookViewController.swift; sourceTree = "<group>"; };
 		BAD560872089FEE70008B1C0 /* NotebooksTableViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebooksTableViewController.swift; sourceTree = "<group>"; };
 		BAD560882089FEE70008B1C0 /* NotebooksTableViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = NotebooksTableViewController.xib; sourceTree = "<group>"; };
 		BAF6C08E206CEB50008CB519 /* Everpobre.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Everpobre.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -107,10 +107,10 @@
 				BA013B9F2076929200EC4E51 /* NotesTableViewController.swift */,
 				BA013BA02076929200EC4E51 /* NotesTableViewController.xib */,
 				BA7A681D2078A817009822E3 /* NoteViewController.swift */,
-				BABC8B2D207AB15A00DA5DAF /* AddNotebookViewController.swift */,
+				BA24464120C7F0320048A6A3 /* NoteViewController+Images.swift */,
 				BAD560872089FEE70008B1C0 /* NotebooksTableViewController.swift */,
 				BAD560882089FEE70008B1C0 /* NotebooksTableViewController.xib */,
-				BA8053DE208D21BB0061C678 /* MapViewController.swift */,
+				BA24464320C7F1AD0048A6A3 /* SelectInMapViewController.swift */,
 			);
 			path = Controllers;
 			sourceTree = "<group>";
@@ -297,9 +297,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BA24464220C7F0320048A6A3 /* NoteViewController+Images.swift in Sources */,
 				BA022ABE2073EBE6008C61D6 /* _Notebook.swift in Sources */,
 				BA61FB612072AC7600EE6A25 /* PhotoContainer.swift in Sources */,
-				BABC8B2E207AB15A00DA5DAF /* AddNotebookViewController.swift in Sources */,
 				BA7A68202078D281009822E3 /* UIViewController+Additions.swift in Sources */,
 				BAF6C092206CEB50008CB519 /* AppDelegate.swift in Sources */,
 				BA7A681E2078A817009822E3 /* NoteViewController.swift in Sources */,
@@ -309,10 +309,10 @@
 				BA022ABD2073EBE6008C61D6 /* _Note.swift in Sources */,
 				BA61FB5C2072AC7600EE6A25 /* Notebook.swift in Sources */,
 				BA61FB602072AC7600EE6A25 /* _PhotoContainer.swift in Sources */,
+				BA24464420C7F1AD0048A6A3 /* SelectInMapViewController.swift in Sources */,
 				BAF6C0B6206CEDAB008CB519 /* Everpobre.xcdatamodeld in Sources */,
 				BA013BA12076929200EC4E51 /* NotesTableViewController.swift in Sources */,
 				BA61FB5E2072AC7600EE6A25 /* Note.swift in Sources */,
-				BA8053DF208D21BB0061C678 /* MapViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

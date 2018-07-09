@@ -45,11 +45,6 @@ class NotebooksTableViewController: UITableViewController {
         case .deleteAllNotes:
             break
         }
-
-        let context = Container.mainContainer.viewContext
-        
-        let noteBookReq = NSFetchRequest<NSFetchRequestResult>(entityName: "Notebook")
-        notebooks = try! context.fetch(noteBookReq) as! [Notebook]
         
     }
     
@@ -132,27 +127,84 @@ class NotebooksTableViewController: UITableViewController {
         notebook = notebooks[indexPath.row] as Notebook
         if notebook.isDefault == "N" {
         
+            let editName = UITableViewRowAction(style: .normal, title: "Edit") { (action, indexPath) in
+                self.createOrEditedNotebook(notebook: self.notebook, isNew: false)
+            }
             let delete = UITableViewRowAction(style: .destructive, title: "Delete") { (action, indexPath) in
                 self.notebookDelete = self.notebook
                 self.deleteNotebookNotes()
             }
-            return [delete]
+            return [delete, editName]
         } else {
             return []
         }
     }
     
     @objc func addNewNotebook()  {
+        createOrEditedNotebook(notebook: nil, isNew: true)
+    }
+    
+    func createOrEditedNotebook(notebook:Notebook?, isNew:Bool)
+    {
+        var title = NSLocalizedString("New Notebook", comment: "")
+        if isNew == false {
+            title = NSLocalizedString("Change Notebook Name", comment: "")
+        }
+        let actionAlertController = UIAlertController(title: title, message: nil, preferredStyle: .alert)
+        actionAlertController.addTextField { (textField) in
+            if isNew {
+                textField.placeholder = NSLocalizedString("Enter name", comment: "")
+            }
+            else {
+                textField.text = notebook?.name
+            }
+        }
+        var actionTitle = NSLocalizedString("Change", comment: "")
+        if isNew {
+            actionTitle = NSLocalizedString("Create", comment: "")
+        }
         
-        let addNotebookVC = AddNotebookViewController()
+        actionAlertController.addAction(UIAlertAction(title: actionTitle, style: .default, handler: { (alert) in
+            if let text = actionAlertController.textFields![0].text
+            {
+                if !text.isEmpty
+                {
+                    let privateMOC = DataManager.sharedManager.persistentContainer.newBackgroundContext()
+                    
+                    if isNew {
+                        privateMOC.perform {
+                            let notebook = Notebook(name: text, inContext: privateMOC, isDefault: "N")
+                            
+                            try! privateMOC.save()
+                            
+                            DispatchQueue.main.async {
+                                self.notebooks.append(DataManager.sharedManager.persistentContainer.viewContext.object(with: notebook.objectID) as! Notebook)
+                                self.tableView.reloadData()
+                            }
+                            
+                        }
+                    }
+                    else {
+                        
+                        privateMOC.perform {
+                            let backNotebook = privateMOC.object(with: (notebook?.objectID)!) as! Notebook
+                            backNotebook.name = text
+                            try! privateMOC.save()
+                            
+                            DispatchQueue.main.async {
+                                
+                                self.tableView.reloadData()
+                            }
+                        }
+                        
+                    }
+                    
+                }
+            }
+        }))
         
-        let navController = UINavigationController(rootViewController: addNotebookVC)
-        
-        addNotebookVC.delegate = self
-        
-        navController.modalPresentationStyle = .overCurrentContext
-        
-        present(navController, animated: true, completion: nil)
+        actionAlertController.addAction(UIAlertAction(title: NSLocalizedString("Cancel", comment: ""), style: .cancel, handler: nil))
+        self.present(actionAlertController, animated: true, completion: nil)
     }
     
     @objc func defaultNewNotebook()  {
@@ -181,22 +233,4 @@ class NotebooksTableViewController: UITableViewController {
         self.present(alert, animated: true, completion: nil)
     }
     
-}
-
-extension NotebooksTableViewController: AddNotebookViewControllerDelegate{
-    
-    func didAddNotebook(notebook: Notebook) {
-        
-        let context = Container.mainContainer.viewContext
-        
-        let noteBookReq = NSFetchRequest<NSFetchRequestResult>(entityName: "Notebook")
-        notebooks = try! context.fetch(noteBookReq) as! [Notebook]
-        
-        tableView.reloadData()
-        
-    }
-    
-    func didEditNotebook(notebook: Notebook) {
-    
-    }
 }

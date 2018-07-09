@@ -6,6 +6,11 @@ import CoreData
 
 public enum PhotoContainerAttributes: String {
     case imageData = "imageData"
+    case rotation = "rotation"
+    case scale = "scale"
+    case tag = "tag"
+    case x = "x"
+    case y = "y"
 }
 
 public enum PhotoContainerRelationships: String {
@@ -39,6 +44,21 @@ open class _PhotoContainer: NSManagedObject {
 
     @NSManaged open
     var imageData: NSData?
+
+    @NSManaged open
+    var rotation: Double
+
+    @NSManaged open
+    var scale: Double
+
+    @NSManaged open
+    var tag: Int64
+
+    @NSManaged open
+    var x: Double
+
+    @NSManaged open
+    var y: Double
 
     // MARK: - Relationships
 

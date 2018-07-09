@@ -9,28 +9,16 @@
 import UIKit
 import CoreData
 
-protocol NotesTableViewControllerDelegate: class {
-    func notesTableViewController(_ vc: NotesTableViewController, didSelectNote: Note)
-}
-
-class NotesTableViewController: UITableViewController {
+class NotesTableViewController: UITableViewController, NSFetchedResultsControllerDelegate {
     
     var noteToChangeNB : Note?
     var noteChangeIndex : IndexPath?
     var notes: [Note] = []
-   
-    weak var delegate: NotesTableViewControllerDelegate?
     
     // MARK: - Properties
-    var fetchedResultsController : NSFetchedResultsController<NSFetchRequestResult>? {
-        didSet {
-            // Whenever the frc changes, we execute the search and
-            // reload the table
-            fetchedResultsController?.delegate = self
-            executeSearch()
-            tableView.reloadData()
-        }
-    }
+    var fetchedResultsController : NSFetchedResultsController<Notebook>!
+    
+    let defaultNoteSorts = [NSSortDescriptor(key: "title", ascending: true)]
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -39,78 +27,113 @@ class NotesTableViewController: UITableViewController {
         self.title = "EverPobre"
         
         // Creo el botón derecho de añadir nota
-        let rightButton = UIBarButtonItem(barButtonSystemItem: .compose, target: self, action: #selector(addNewNoteNotebook))
+        let rightButton = UIBarButtonItem(barButtonSystemItem: .compose, target: self, action: #selector(addNoteSelectinNotebbok))
         let rightButton2 = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addNewNote))
         
         navigationItem.rightBarButtonItems = [rightButton2, rightButton]
         
         // Creo el botón izquierdo de añadir notebook
-        navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .bookmarks, target: self, action: #selector(notebookList))
+        navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .bookmarks, target: self, action: #selector(manageNotebooks))
         
-        // Preparamos el request
-        prepareFetch()
-        // Preparamos el split
+        // MARK: Fetch Request.
+        let viewMOC = DataManager.sharedManager.persistentContainer.viewContext
+        
+        let fetchRequest = NSFetchRequest<Notebook>(entityName: "Notebook")
+        
+        let sortByDefault = NSSortDescriptor(key: "isDefault", ascending: false)
+        let sortByTitle = NSSortDescriptor(key: "name", ascending: true)
+        fetchRequest.sortDescriptors = [sortByDefault,sortByTitle]
+        
+        fetchedResultsController = NSFetchedResultsController(fetchRequest: fetchRequest, managedObjectContext: viewMOC, sectionNameKeyPath: nil, cacheName: nil)
+        fetchedResultsController.delegate = self
+        
+        try! fetchedResultsController.performFetch()
+        
+        if fetchedResultsController.fetchedObjects?.count == 0
+        {
+            // Sólo la primera vez, cuando no hay default. Lo hacemos en el ViewContext porque es indispensable para la App.
+            _ = Notebook(name: "My first Notebook", inContext: viewMOC, isDefault: "S")
+            
+            try! viewMOC.save()
+            
+        }
+        NotificationCenter.default.addObserver(self, selector: #selector(reloadTableView), name: Notification.Name.NSManagedObjectContextDidSave, object: nil)
+        
         prepareSplitDetail()
-        
         
     }
     
-}
-
-// MARK: - Subclass responsability
-extension NotesTableViewController {
+    // MARK: - Table view data source
+    
+    override func numberOfSections(in tableView: UITableView) -> Int {
+        return (fetchedResultsController.fetchedObjects?.count)!
+    }
+    
+    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        let notebook = fetchedResultsController.object(at: IndexPath(row: section, section: 0))
+        return notebook.notes.count
+    }
+    
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        
         var cell = tableView.dequeueReusableCell(withIdentifier: "reuseIdentifier")
         if cell == nil {
             cell = UITableViewCell(style: .default, reuseIdentifier: "reuseIdentifier")
         }
-        
-        let note = fetchedResultsController?.object(at: indexPath) as! Note
-        
-        cell?.textLabel?.text = note.title
+        let notebook = fetchedResultsController.object(at: IndexPath(row: indexPath.section, section: 0))
+        let notes = notebook.notes.sortedArray(using: defaultNoteSorts) as! [Note]
+        cell?.textLabel?.text = notes[indexPath.row].title
         
         return cell!
-        
     }
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let notebook = fetchedResultsController.object(at: IndexPath(row: indexPath.section, section: 0))
+        let notes = notebook.notes.sortedArray(using: defaultNoteSorts) as! [Note]
+        let note = notes[indexPath.row]
         
-        let note = fetchedResultsController?.object(at: indexPath) as? Note
+        let noteVC = NoteViewController()
+        noteVC.note = note
         
-        // Avisamos al delegado
-        delegate?.notesTableViewController(self, didSelectNote: note!)
+        let detailNavController = UINavigationController(rootViewController: noteVC)
+        
+        splitViewController?.showDetailViewController(detailNavController, sender: nil)
         
     }
     
-    @objc func addNewNote() {
+    
+    override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+        let notebook = fetchedResultsController.object(at: IndexPath(row: section, section: 0))
+        return notebook.name
+    }
+    
+    // MARK: UIBarButtons Actions
+    
+    @objc func addNewNote()  {
         
-        let context = Container.mainContainer.viewContext
+        let defaultNotebook = fetchedResultsController.fetchedObjects!.first!
+        addNewNoteToNotebook(defaultNotebook)
+    }
+    
+    @objc func addNewNoteToNotebook(_ notebook:Notebook)  {
         
-        let noteBookReq = NSFetchRequest<NSFetchRequestResult>(entityName: "Notebook")
-        let results = try? context.fetch(noteBookReq)
+        let privateMOC = DataManager.sharedManager.persistentContainer.newBackgroundContext()
         
-        for data in results as! [NSManagedObject] {
-            if data.value(forKey: "isDefault") as! String == "S" {
-                let notebook = data as! Notebook
-                let date = Calendar.current.date(byAdding: .month, value: 12, to: (Date()))
-                _ = Note(title: "New Note", text: "", notebook: notebook, expirationDate: date!, inContext: context)
-                // Guardamos
-                if context.hasChanges {
-                    do {
-                        try context.save()
-                    }catch{
-                        print("Problemas al salvar")
-                    }
-                }
-            }
+        privateMOC.perform {
+            
+            let notebookPrivate = (privateMOC.object(with: notebook.objectID) as! Notebook)
+            
+            let date = Calendar.current.date(byAdding: .month, value: 12, to: (Date()))
+            _ = Note(title: "New Note", text: "", notebook: notebookPrivate, expirationDate: date!, inContext: privateMOC)
+            
+            try! privateMOC.save()
         }
     }
     
-    @objc func addNewNoteNotebook()  {
-        
-        let notebooksTableViewController = NotebooksTableViewController()
+    @objc func addNoteSelectinNotebbok(barButton:UIBarButtonItem)
+    {
+        let notebooksTableViewController = NotebooksTableViewController(style: .plain)
+        notebooksTableViewController.notebooks = fetchedResultsController.fetchedObjects!
         notebooksTableViewController.delegate = self
         let navController = UINavigationController(rootViewController: notebooksTableViewController)
         notebooksTableViewController.accion = Accion.addNewNoteNotebook
@@ -118,12 +141,13 @@ extension NotesTableViewController {
         navController.modalPresentationStyle = .overCurrentContext
         
         present(navController, animated: true, completion: nil)
-
+        
     }
     
-    @objc func notebookList()  {
-        
-        let notebooksTableViewController = NotebooksTableViewController()
+    @objc func manageNotebooks(barButton:UIBarButtonItem)
+    {
+        let notebooksTableViewController = NotebooksTableViewController(style: .plain)
+        notebooksTableViewController.notebooks = fetchedResultsController.fetchedObjects!
         notebooksTableViewController.delegate = self
         let navController = UINavigationController(rootViewController: notebooksTableViewController)
         notebooksTableViewController.accion = Accion.listNotebooks
@@ -133,124 +157,69 @@ extension NotesTableViewController {
         present(navController, animated: true, completion: nil)
     }
     
-}
-
-
-
-// MARK: - Delegados
-extension NotesTableViewController: NotesTableViewControllerDelegate {
-    func notesTableViewController(_ vc: NotesTableViewController, didSelectNote note: Note) {
-        
-        let noteViewController = NoteViewController()
-        noteViewController.note = note
-        navigationController?.pushViewController(noteViewController, animated: true)
-        
+    // MARK: fetchedResultController Delegate
+    
+    func controllerDidChangeContent(_ controller: NSFetchedResultsController<NSFetchRequestResult>) {
+        tableView.reloadData()
     }
+    
+    @objc func reloadTableView() {
+        DispatchQueue.main.async {
+            self.tableView.reloadData()
+        }
+    }
+    
 }
 
 // MARK: - Table Data Source
 extension NotesTableViewController {
-    
-    override func numberOfSections(in tableView: UITableView) -> Int {
-        
-        if let fc = fetchedResultsController {
-            guard let sections = fc.sections else {
-                return 1
-            }
-            return sections.count
-        } else {
-            return 0
-        
-        }
-    }
-
-    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        
-        if let fc = fetchedResultsController {
-            guard let numberOfRows = fc.sections?[section].numberOfObjects else {
-                return 0
-            }
-            return numberOfRows
-        } else {
-            return 0
-        }
-    }
-
-    override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-
-        if let fc = fetchedResultsController {
-            return fc.sections?[section].name
-        } else {
-            return nil
-        }
-    }
-
-    override func tableView(_ tableView: UITableView, sectionForSectionIndexTitle title: String, at index: Int) -> Int {
-        
-        if let fc = fetchedResultsController {
-            return fc.section(forSectionIndexTitle: title, at: index)
-        } else {
-            return 0
-        }
-    }
-    
-    override func sectionIndexTitles(for tableView: UITableView) -> [String]? {
-        
-        if let fc = fetchedResultsController {
-            return fc.sectionIndexTitles
-        } else {
-            return nil
-        }
-    }
-    
-//    override func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
-//        let returnedView = UIView()
-//        returnedView.backgroundColor = UIColor.lightGray
-//
-//        return returnedView
-//    }
-    
+  
     override func tableView(_ tableView: UITableView, editActionsForRowAt indexPath: IndexPath) -> [UITableViewRowAction]? {
         
-        if (self.fetchedResultsController?.sections?[indexPath.section].numberOfObjects)! > 1 {
-        
-            let delete = UITableViewRowAction(style: .destructive, title: "Delete") { (action, indexPath) in
-                
-                let context = Container.mainContainer.viewContext
-                let note = self.fetchedResultsController?.object(at:indexPath)
-                context.delete(note as! NSManagedObject)
-                
-                // Guardamos
-                if context.hasChanges {
-                    do {
-                        try context.save()
-                    }catch{
-                        print("Problemas al salvar")
-                    }
+        let delete = UITableViewRowAction(style: .destructive, title: "Delete") { (action, indexPath) in
+            
+            let context = DataManager.sharedManager.persistentContainer.viewContext
+            // Guardamos la nota que quieren borrar
+            let notebook = self.fetchedResultsController.object(at: IndexPath(row: indexPath.section, section: 0))
+            let notes = notebook.notes.sortedArray(using: self.defaultNoteSorts) as! [Note]
+            let noteToDelete = notes[indexPath.row]
+            
+            context.delete(noteToDelete)
+            
+            // Guardamos
+            if context.hasChanges {
+                do {
+                    try context.save()
+                }catch{
+                    print("Problemas al salvar")
                 }
             }
-        
-            let changeNotebook = UITableViewRowAction(style: .normal, title: "Change Notebook") { (action, indexPath) in
-                let notebooksTableViewController = NotebooksTableViewController()
-                notebooksTableViewController.delegate = self
-                let navController = UINavigationController(rootViewController: notebooksTableViewController)
-            
-                // Guardamos la nota y el indexpath que quieren cambiar de notebook
-                self.noteToChangeNB = self.fetchedResultsController?.object(at: indexPath) as? Note
-                self.noteChangeIndex = indexPath
-                
-                notebooksTableViewController.accion = .changeOneNote
-                
-                navController.modalPresentationStyle = .overCurrentContext
-            
-                self.present(navController, animated: true, completion: nil)
-                }
-            changeNotebook.backgroundColor = UIColor.blue
-        
-            return [delete, changeNotebook]
-        } else {
-            return []
         }
+        
+        let changeNotebook = UITableViewRowAction(style: .normal, title: "Change Notebook") { (action, indexPath) in
+            
+            let notebooksTableViewController = NotebooksTableViewController()
+            notebooksTableViewController.notebooks = self.fetchedResultsController.fetchedObjects!
+            notebooksTableViewController.delegate = self
+            let navController = UINavigationController(rootViewController: notebooksTableViewController)
+            
+            // Guardamos la nota y el indexpath que quieren cambiar de notebook
+            let notebook = self.fetchedResultsController.object(at: IndexPath(row: indexPath.section, section: 0))
+            let notes = notebook.notes.sortedArray(using: self.defaultNoteSorts) as! [Note]
+            
+            self.noteToChangeNB = notes[indexPath.row]
+            self.noteChangeIndex = indexPath
+            
+            notebooksTableViewController.accion = .changeOneNote
+            
+            navController.modalPresentationStyle = .overCurrentContext
+            
+            self.present(navController, animated: true, completion: nil)
+        }
+        changeNotebook.backgroundColor = UIColor.blue
+        
+        return [delete, changeNotebook]
+        
     }
     
     func tableView(tableView: UITableView, canEditRowAtIndexPath indexPath: NSIndexPath) -> Bool
@@ -260,79 +229,24 @@ extension NotesTableViewController {
     
 }
 
-
-// MARK: - Fetches
-extension NotesTableViewController {
-    
-    func executeSearch() {
-        if let fc = fetchedResultsController {
-            do {
-                try fc.performFetch()
-            } catch let e as NSError {
-                print("Error while trying to perform a search: \(e)")
-            }
-        }
-    }
-    
-    func prepareFetch() {
-        // Creo el FetchedResultsController
-        let noteReq = Note.fetchRequest()
-        noteReq.fetchBatchSize = 100
-        //sortDescriptors
-        noteReq.sortDescriptors =
-            [NSSortDescriptor(key: "notebook.name", ascending: true)]
-        
-        //Predicates
-        let valorS = "S"
-        let predicateS = NSPredicate(format: "notebook.name == %@", valorS)
-        noteReq.predicate = predicateS
-        
-        fetchedResultsController = NSFetchedResultsController(fetchRequest: noteReq, managedObjectContext: Container.mainContainer.viewContext, sectionNameKeyPath: "notebook.name", cacheName: nil)
-        
-        fetchedResultsController?.delegate = self
-        
-        let noteReqDefault = Note.fetchRequest()
-        
-        //sortDescriptors
-        noteReqDefault.sortDescriptors =
-            [NSSortDescriptor(key: "notebook.name", ascending: true),
-             NSSortDescriptor(key: NoteAttributes.title.rawValue, ascending: true)]
-        
-        //Predicates
-        let valorN = "N"
-        let predicateN = NSPredicate(format: "notebook.isDefault == %@", valorN)
-        noteReq.predicate = predicateN
-        
-        fetchedResultsController = NSFetchedResultsController(fetchRequest: noteReqDefault, managedObjectContext: Container.mainContainer.viewContext, sectionNameKeyPath: "notebook.name", cacheName: nil)
-        
-//        let frc = NSFetchedResultsController(fetchRequest: noteReq, managedObjectContext: Container.mainContainer.viewContext, sectionNameKeyPath: "notebook.name", cacheName: nil)
-        
-        //self.fetchedResultsController = frc
-    }
-}
-
 extension NotesTableViewController {
     
     func prepareSplitDetail() {
-        
-        let noteVC = NoteViewController()
-        // Asignamos delegados
+        // Solamente si es iPad
         if UIDevice.current.userInterfaceIdiom == .pad {
-            self.delegate = noteVC
-        } 
-        let indexPath = IndexPath(row: 0, section: 0)
-        noteVC.note = fetchedResultsController?.object(at: indexPath) as? Note
-        splitViewController?.viewControllers[1] = noteVC
+            let noteVC = NoteViewController()
+            // Asignamos delegados
+            //self.delegate = noteVC as? NotesTableViewControllerDelegate
+            // Ponemos la primera nota del primer notebook
+            let notebook = self.fetchedResultsController.object(at: IndexPath(row: 0, section: 0))
+            if let notes = notebook.notes.sortedArray(using: self.defaultNoteSorts) as? [Note] {
+                let note = notes[0]
+                noteVC.note = note
+                let detailNavController = UINavigationController(rootViewController: noteVC)
+                splitViewController?.showDetailViewController(detailNavController, sender: nil)
+            }
+        }
     }
-}
-
-// MARK: - Delegate fetch
-extension NotesTableViewController: NSFetchedResultsControllerDelegate {
-    
-    func controllerDidChangeContent(_ controller: NSFetchedResultsController<NSFetchRequestResult>) {
-        tableView.reloadData()
-    }
-    
 }
 
 // MARK: - Delegate NotebooksTableViewController
@@ -343,11 +257,12 @@ extension NotesTableViewController: NotebooksTableViewControllerDelegate {
         switch accion {
         case .changeOneNote:
             let notebook = didSelectNotebook
-            let noteToChange = fetchedResultsController?.object(at: noteChangeIndex!) as! Note
-            noteToChange.notebook = notebook
+            let noteToChange = self.noteToChangeNB
+            
+            noteToChange?.notebook = notebook
             
             // Guardamos
-            let context = Container.mainContainer.viewContext
+            let context = DataManager.sharedManager.persistentContainer.viewContext
             if context.hasChanges {
                 do {
                     try context.save()
@@ -358,7 +273,7 @@ extension NotesTableViewController: NotebooksTableViewControllerDelegate {
         case .listNotebooks:
             let notebookSelected = didSelectNotebook
             
-            let context = Container.mainContainer.viewContext
+            let context = DataManager.sharedManager.persistentContainer.viewContext
             let noteBookReq = NSFetchRequest<NSFetchRequestResult>(entityName: "Notebook")
             let results = try? context.fetch(noteBookReq)
             
@@ -380,7 +295,7 @@ extension NotesTableViewController: NotebooksTableViewControllerDelegate {
             }
         case .addNewNoteNotebook:
             let notebookSelected = didSelectNotebook
-            let context = Container.mainContainer.viewContext
+            let context = DataManager.sharedManager.persistentContainer.viewContext
             let date = Calendar.current.date(byAdding: .month, value: 12, to: (Date()))
             _ = Note(title: "Nota Añadida", text: "", notebook: notebookSelected, expirationDate: date!, inContext: context)
             // Guardamos
@@ -394,7 +309,7 @@ extension NotesTableViewController: NotebooksTableViewControllerDelegate {
         case .changeAllNotes:
             let notebookSelected = didSelectNotebook
             let notebookToDelete = notebookToDelete
-            let context = Container.mainContainer.viewContext
+            let context = DataManager.sharedManager.persistentContainer.viewContext
             let noteBookReq = NSFetchRequest<NSFetchRequestResult>(entityName: "Notebook")
             let results = try? context.fetch(noteBookReq)
             
@@ -418,7 +333,7 @@ extension NotesTableViewController: NotebooksTableViewControllerDelegate {
             }
         case .deleteAllNotes:
             let notebookSelected = didSelectNotebook
-            let context = Container.mainContainer.viewContext
+            let context = DataManager.sharedManager.persistentContainer.viewContext
             context.delete(notebookSelected)
             // Guardamos
             if context.hasChanges {
@@ -431,10 +346,6 @@ extension NotesTableViewController: NotebooksTableViewControllerDelegate {
         }
     }
 }
-
-
-
-
 
 
 

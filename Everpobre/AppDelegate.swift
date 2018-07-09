@@ -13,36 +13,26 @@ import CoreData
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
-    var splitViewController: UISplitViewController!
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
     
         window = UIWindow()
         
-        // Insertamos Notebook por defecto
-        insertDefaultNotebook()
+        //deleteAllCoreData()
         
-        // Creamos los controladores
-        let notesTVC = NotesTableViewController()
-        let noteVC = NoteViewController()
+        //window?.tintColor = UIColor(red: 222/255.0, green: 124/255.0, blue: 31/255.0, alpha: 1)
         
-        // Asignamos delegados
-        if UIDevice.current.userInterfaceIdiom == .pad {
-            notesTVC.delegate = noteVC
-        } else {
-            notesTVC.delegate = notesTVC
-        }
+        let notesTVC = NotesTableViewController(style: .grouped)
+
+        let masterNavController = UINavigationController(rootViewController: notesTVC)
+
+        let splitViewController = UISplitViewController()
+        splitViewController.view.backgroundColor = .white
+        splitViewController.viewControllers = [masterNavController]
+
+        window?.rootViewController = splitViewController
         
-        if UIDevice.current.userInterfaceIdiom == .pad {
-            // Creamos el split
-            splitViewController = UISplitViewController()
-            splitViewController.viewControllers = [notesTVC.wrappedInNavigation(),noteVC.wrappedInNavigation()]
-            window?.rootViewController = splitViewController
-        } else {
-            window?.rootViewController = notesTVC.wrappedInNavigation()
-        }
-            
         window?.makeKeyAndVisible()
             
         return true

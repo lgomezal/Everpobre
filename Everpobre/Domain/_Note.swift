@@ -5,8 +5,11 @@ import Foundation
 import CoreData
 
 public enum NoteAttributes: String {
+    case address = "address"
     case createDate = "createDate"
     case expirationDate = "expirationDate"
+    case lat = "lat"
+    case lon = "lon"
     case text = "text"
     case title = "title"
 }
@@ -42,10 +45,19 @@ open class _Note: NSManagedObject {
     // MARK: - Properties
 
     @NSManaged open
+    var address: String?
+
+    @NSManaged open
     var createDate: Date
 
     @NSManaged open
     var expirationDate: Date
+
+    @NSManaged open
+    var lat: Double
+
+    @NSManaged open
+    var lon: Double
 
     @NSManaged open
     var text: String?
